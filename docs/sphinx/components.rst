@@ -678,3 +678,15 @@ vorticity
 
 .. doxygenstruct:: Vorticity
    :members:
+
+relax_potential
+~~~~~~~~~~~~~~~
+
+This is an alternative way to solve for the potential, for steady
+state simulations in which the dynamics of Alfven waves need not be
+followed. Rather than solving for the potential using a Laplacian
+inversion at each iteration, a diffusion-like equation is solved for
+the potential.  This has the advantage that modifications to the
+vorticity definition, such as non-Boussineq variation in density, can
+be relatively easily incorporated.
+
