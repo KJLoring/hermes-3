@@ -9,7 +9,7 @@
 class LaplaceXY;
 class Laplacian;
 
-/// Evolve electron density in time
+/// Evolve vorticity in time
 /// 
 struct Vorticity : public Component {
   /// Options
