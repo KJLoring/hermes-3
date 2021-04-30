@@ -11,7 +11,7 @@
 /// Uses a relaxation method for the potential, which is valid for
 /// steady state, but not for timescales shorter than the relaxation
 /// timescale.
-/// 
+///
 struct RelaxPotential : public Component {
   /// Options
   ///
@@ -24,7 +24,7 @@ struct RelaxPotential : public Component {
   ///   - split_n0
   ///   - laplacian
   ///     Options for the Laplacian phi solver
-  /// 
+  ///
   RelaxPotential(std::string name, Options &options, Solver *solver);
 
   /// Optional inputs
@@ -32,7 +32,7 @@ struct RelaxPotential : public Component {
   /// - species
   ///   - pressure and charge => Calculates diamagnetic terms [if diamagnetic=true]
   ///   - pressure, charge and mass => Calculates polarisation current terms [if diamagnetic_polarisation=true]
-  /// 
+  ///
   /// Sets in the state
   /// - species
   ///   - [if has pressure and charge]
@@ -50,12 +50,12 @@ struct RelaxPotential : public Component {
   /// - fields
   ///   - DivJextra    Divergence of current, including parallel current
   ///                  Not including diamagnetic or polarisation currents
-  /// 
+  ///
   void finally(const Options &state) override;
-  
+
 private:
   Field3D Vort; // Evolving vorticity
-  
+
   Field3D phi1; // Scaled electrostatic potential, evolving in time ϕ_1 = λ_2 ϕ
   Field3D phi;  // Electrostatic potential
 
