@@ -1,6 +1,7 @@
 #include <iterator>
 
 #include <bout/constants.hxx>
+#include <bout/output_bout_types.hxx>
 
 #include "../include/collisions.hxx"
 
@@ -178,9 +179,9 @@ void Collisions::transform(Options& state) {
                   ? 23 - 0.5 * log(Ni[i]) + 1.5 * log(Ti[i]) - log(SQ(Zi) * Ai)
               : (Te[i] < 10 * SQ(Zi))
                   // Ti m_e/m_i < Te < 10 Z^2
-                  ? 31.0 - 0.5 * log(Ne[i]) + log(Te[i])
+                  ? 30.0 - 0.5 * log(Ne[i]) - log(Zi) + 1.5 * log(Te[i])
                   // Ti m_e/m_i < 10 Z^2 < Te
-                  : 30.0 - 0.5 * log(Ne[i]) - log(Zi) + 1.5 * log(Te[i]);
+                  : 31.0 - 0.5 * log(Ne[i]) + log(Te[i]);
 
           // Calculate v_a^2, v_b^2
           const BoutReal vesq = 2 * floor(Te[i], 0.1) * SI::qe / SI::Me;
@@ -190,8 +191,12 @@ void Collisions::transform(Options& state) {
           const BoutReal nu = SQ(SQ(SI::qe) * Zi) * floor(Ni[i], 0.0)
                               * floor(coulomb_log, 1.0) * (1. + me_mi)
                               / (3 * pow(PI * (vesq + visq), 1.5) * SQ(SI::e0 * SI::Me));
-
-          ASSERT2(std::isfinite(nu));
+#if CHECK >= 2
+	  if (!std::isfinite(nu)) {
+	    throw BoutException("Collisions 195: {} at {}: Ni {}, Ne {}, Clog {}, vesq {}, visq {}, Te {}, Ti {}\n",
+                                nu, i, Ni[i], Ne[i], coulomb_log, vesq, visq, Te[i], Ti[i]);
+	  }
+#endif
           return nu;
         });
 

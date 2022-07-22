@@ -2,6 +2,7 @@
 #include <derivs.hxx>
 #include <difops.hxx>
 #include <bout/fv_ops.hxx>
+#include <bout/output_bout_types.hxx>
 
 #include "../include/evolve_momentum.hxx"
 #include "../include/div_ops.hxx"
@@ -209,6 +210,8 @@ EvolveMomentum::EvolveMomentum(std::string name, Options &alloptions, Solver *so
     bout::globals::dump.addRepeat(V, std::string("V") + name);
 
     bout::globals::dump.addRepeat(ddt(NV), std::string("ddt(NV") + name + std::string(")"));
+    bout::globals::dump.addRepeat(momentum_source, std::string("SNV") + name);
+    momentum_source = 0.0;
   }
 }
 
@@ -292,7 +295,16 @@ void EvolveMomentum::finally(const Options &state) {
 
   // Other sources/sinks
   if (species.isSet("momentum_source")) {
-    ddt(NV) += get<Field3D>(species["momentum_source"]);
+    momentum_source = get<Field3D>(species["momentum_source"]);
+    ddt(NV) += momentum_source;
   }
+
+#if CHECKLEVEL >= 1
+  for (auto& i : NV.getRegion("RGN_NOBNDRY")) {
+    if (!std::isfinite(ddt(NV)[i])) {
+      throw BoutException("ddt(NV{}) non-finite at {}\n", name, i);
+    }
+  }
+#endif
 }
 

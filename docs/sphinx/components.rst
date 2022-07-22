@@ -125,6 +125,14 @@ By default parallel thermal conduction is included, which requires a collision
 time. If collisions are not calculated, then thermal conduction should be turned off
 by setting `thermal_conduction = false` in the input options.
 
+If the component option ``diagnose = true`` then additional fields
+will be saved to the dump files: The species temperature ``T + name``
+(e.g. ``Td+`` or ``Te``), the time derivative ``ddt(P + name)``
+(e.g. ``ddt(Pd+)`` or ``ddt(Pe)``), and the source of pressure from
+other components is saved as ``SP + name`` (e.g. ``SPd+`` or ``SPe``).
+The pressure source is the energy density source multiplied by ``2/3``
+(i.e. assumes a monatomic species).
+
 Notes:
 
 - Heat conduction through the boundary is turned off currently. This is because
@@ -147,6 +155,19 @@ evolve_momentum
 
 Evolves the momentum `NV<species>` in time. The evolving quantity includes the atomic
 mass number, so should be divided by `AA` to obtain the particle flux.
+
+If the component option ``diagnose = true`` then additional fields
+will be saved to the dump files: The velocity ``V + name``
+(e.g. ``Vd+`` or ``Ve``), the time derivative ``ddt(NV + name)``
+(e.g. ``ddt(NVd+)`` or ``ddt(NVe)``), and the source of momentum
+density (i.e force density) from other components is saved as ``SNV +
+name`` (e.g. ``SNVd+`` or ``SNVe``).
+
+The implementation is in ``EvolveMomentum``:
+
+.. doxygenstruct:: EvolveMomentum
+   :members:
+
 
 .. _zero_current:
 
@@ -325,10 +346,11 @@ direction on the parallel transport, and is the `dneut` input setting.
 collisions
 ~~~~~~~~~~
 
-For collisions between charged particles. In the following all quantities are
-in SI units except the temperatures: `T` is in eV, so `eT` has units of Joules.
+For collisions between charged particles. In the following all
+quantities are in SI units except the temperatures: :math:`T` is in
+eV, so :math:`eT` has units of Joules.
 
-Debye length `\lambda_D`
+Debye length :math:`\lambda_D`
 
 .. math::
 
@@ -340,25 +362,33 @@ Coulomb logarithm, from [NRL formulary 2019], adapted to SI units
 
   .. math::
 
-     \ln \lambda_ee = 16.6 - \frac{1}{2} \ln\left(n_e\right) + \frac{5}{4}\ln\left(T_e\right) - sqrt{10^{-5} + \left(\ln T_e - 2\right)^2 / 16} 
+     \ln \lambda_{ee} = 30.4 - \frac{1}{2} \ln\left(n_e\right) + \frac{5}{4}\ln\left(T_e\right) - \sqrt{10^{-5} + \left(\ln T_e - 2\right)^2 / 16} 
 
-  
+  where the coefficient (30.4) differs from the NRL value due to
+  converting density from cgs to SI units (:math:`30.4 = 23.5 -
+  0.5\ln\left(10^{-6}\right)`).
+
+
 - Electron-ion collisions
 
   .. math::
 
      \ln \lambda_{ei} = \left\{\begin{array}{ll}
-                              16.1 - \frac{1}{2}\ln\left(n_e\right) - \ln(Z) + \frac{3}{2}\ln\left(T_e\right) & \textrm{if} T_im_e/m_i < T_e < 10Z^2 \\
-                              17.1 - \frac{1}{2}\ln\left(n_e\right) + \ln\left(T_e\right) & \textrm{if} T_im_e/m_i < 10Z^2 < T_e \\
-                              9.09 - \frac{1}{2}\ln\left(n_i\right) + \frac{3}{2}\ln\left(T_i\right) - \ln\left(Z^2\mu\right) & \textrm{if} T_e < T_im_e/m_i \\
+                              10 & \textrm{if } T_e < 0.1 \textrm{eV or } n_e < 10^{10}m^{-3} \\
+                              30 - \frac{1}{2}\ln\left(n_e\right) - \ln(Z) + \frac{3}{2}\ln\left(T_e\right) & \textrm{if } T_im_e/m_i < T_e < 10Z^2 \\
+                              31 - \frac{1}{2}\ln\left(n_e\right) + \ln\left(T_e\right) & \textrm{if } T_im_e/m_i < 10Z^2 < T_e \\
+                              23 - \frac{1}{2}\ln\left(n_i\right) + \frac{3}{2}\ln\left(T_i\right) - \ln\left(Z^2\mu\right) & \textrm{if } T_e < T_im_e/m_i \\
                               \end{array}\right.
      
 - Mixed ion-ion collisions
   
   .. math::
 
-     \ln \lambda_{ii'} = 16.1 - ln\left[\frac{ZZ'\left(\mu + \mu'\right)}{\mu T_{i'} + \mu'T_i}\left(\frac{n_iZ^2}{T_i} + \frac{n_{i'} Z'^2}{T_{i'}}\right)^{1/2}\right]
+     \ln \lambda_{ii'} = 29.91 - ln\left[\frac{ZZ'\left(\mu + \mu'\right)}{\mu T_{i'} + \mu'T_i}\left(\frac{n_iZ^2}{T_i} + \frac{n_{i'} Z'^2}{T_{i'}}\right)^{1/2}\right]
 
+  where like the other expressions the different constant is due to
+  converting from cgs to SI units: :math:`29.91 = 23 -
+  0.5\ln\left(10^{-6}\right)`.
 
 The frequency of charged species `a` colliding with charged species `b` is
 
@@ -367,10 +397,10 @@ The frequency of charged species `a` colliding with charged species `b` is
    \nu_{ab} = \frac{1}{3\pi^{3/2}\epsilon_0^2}\frac{Z_a^2 Z_b^2 n_b \ln\Lambda}{\left(v_a^2 + v_b^2\right)^{3/2}}\frac{\left(1 + m_a / m_b\right)}{m_a^2}
 
 
-Note that the cgs expression in Hinton is divided by `\left(4\pi\epsilon_0\right)^2` to get
+Note that the cgs expression in Hinton is divided by :math:`\left(4\pi\epsilon_0\right)^2` to get
 the expression in SI units.
 
-For conservation of momentum, the collision frequencies `\nu_{ab}` and `\nu_{ba}` are
+For conservation of momentum, the collision frequencies :math:`\nu_{ab}` and :math:`\nu_{ba}` are
 related by:
 
 .. math::
@@ -717,6 +747,91 @@ The implementation of these rates is in `ADASNeonIonisation`,
 
 .. doxygenstruct:: ADASNeonCX
    :members:
+
+Fixed fraction radiation
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+These components produce volumetric electron energy losses, but don't
+otherwise modify the plasma solution: Their charge and mass density
+are not calculated, and there are no interactions with other species
+or boundary conditions.
+
+The ``fixed_fraction_carbon`` component calculates radiation due to carbon
+in coronal equilibrium, using a simple formula from `I.H.Hutchinson Nucl. Fusion 34 (10) 1337 - 1348 (1994) <https://doi.org/10.1088/0029-5515/34/10/I04>`_:
+
+.. math::
+
+   L\left(T_e\right) = 2\times 10^{-31} \frac{\left(T_e/10\right)^3}{1 + \left(T_e / 10\right)^{4.5}}
+
+which has units of :math:`Wm^3` with :math:`T_e` in eV.
+
+To use this component you can just add it to the list of components and then
+configure the impurity fraction:
+
+.. code-block:: ini
+
+   [hermes]
+   components = ..., fixed_fraction_carbon, ...
+
+   [fixed_fraction_carbon]
+   fraction = 0.05   # 5% of electron density
+   diagnose = true   # Saves Rfixed_fraction_carbon to output
+
+Or to customise the name of the radiation output diagnostic a section can be
+defined like this:
+
+.. code-block:: ini
+
+   [hermes]
+   components = ..., c, ...
+
+   [c]
+   type = fixed_fraction_carbon
+   fraction = 0.05   # 5% of electron density
+   diagnose = true   # Saves Rc (R + section name)
+
+The ``fixed_fraction_nitrogen`` component works in the same way, calculating nitrogen
+radiation using a formula from `Bruce Lipschultz et al 2016 Nucl. Fusion 56 056007 <https://doi.org/10.1088/0029-5515/56/5/056007>`_:
+
+.. math::
+
+   L\left(T_e\right) = \left\{\begin{array}{cl}
+   5.9\times 10^{-34}\frac{\sqrt{T_e - 1}\left(80 - T_e\right)}{1 + 3.1\times 10^{-3}\left(T_e - 1\right)^2} & \textrm{If $1 < T_e < 80$eV} \\
+   0 & \textrm{Otherwise}\end{array}\right.
+
+
+The ``fixed_fraction_neon`` component use a piecewise polynomial fit to the neon
+cooling curve (Ryoko 2020 Nov):
+
+.. math::
+
+   L\left(T\right) = \left\{\begin{array}{cl}
+   \sum_{i=0}^5 a_i T_e^i & \textrm{If $3 \le T_e < 100$eV} \\
+   7\times 10^{-35} \left(T_e - 2\right) + 10^{-35} & \textrm{If $2 \le T_e < 3$eV} \\
+   10^{-35}\left(T_e - 1\right) & \textrm{If $1 < T_e < 2$eV} \\
+   0 & \textrm{Otherwise}\end{array}\right.
+
+where the coefficients of the polynomial fit are :math:`a_0 =
+-3.2798\times 10^{-34}`, :math:`a_1 = -3.4151\times 10^{-34}`,
+:math:`a_2 = 1.7347\times 10^{-34}`, :math:`a_3 = -5.119\times
+10^{-36}`, :math:`a_4 = 5.4824\times 10^{-38}`, :math:`a_5 =
+-2.0385\times 10^{-40}`.
+
+The ``fixed_fraction_argon`` components uses a piecewise polynomial
+fit to the argon cooling curve (Ryoko 2020 Nov):
+
+.. math::
+
+   L\left(T\right) = \left\{\begin{array}{cl}
+   \sum_{i=0}^9 b_i T_e^i & \textrm{If $1.5 \le T_e < 100$eV} \\
+   5\times 10^{-35} \left(T_e - 1\right) & \textrm{If $1 \le T_e < 1.5$eV} \\
+   0 & \textrm{Otherwise}\end{array}\right.
+
+where polynomial coefficients :math:`b_0\ldots b_9` are
+:math:`-9.9412e-34`, :math:`4.9864e-34`, :math:`1.9958e-34`,
+:math:`8.6011e-35`, :math:`-8.341e-36`, :math:`3.2559e-37`,
+:math:`-6.9642e-39`, :math:`8.8636e-41`, :math:`-6.7148e-43`,
+:math:`2.8025e-45`, :math:`-4.9692e-48`.
 
 Electromagnetic fields
 ----------------------
